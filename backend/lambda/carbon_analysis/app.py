@@ -3,7 +3,7 @@ import boto3
 from flask import Flask, request, Response, stream_with_context
 
 app = Flask(__name__)
-bedrock = boto3.client(service_name='bedrock-runtime', region_name='ap-southeast-1')
+bedrock = boto3.client(service_name='bedrock-runtime', region_name='ap-southeast-5')
 MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0'
 
 def add_cors_headers(response):
