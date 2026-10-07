@@ -1,0 +1,19 @@
+# Ignore non-project files
+*.pdf
+*.jpeg
+*.jpg
+*.png
+kk9-website/
+OpsJejak_Master_Development_Plan.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# SAM
+.aws-sam/
+samconfig.toml

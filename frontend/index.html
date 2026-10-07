@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eco-Action AI</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, var(--bg) 0%, #020617 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+    p.subtitle { color: var(--text-muted); font-size: 1.1rem; }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: #fff; }
+    
+    label { display: block; margin-bottom: 6px; font-size: 0.95rem; color: var(--text-muted); }
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.3s ease;
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); }
+
+    .ai-output {
+      height: 300px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    
+    .ai-output p { margin-bottom: 1em; }
+    .ai-output strong { color: var(--primary); }
+    .ai-output h3 { font-size: 1.1rem; margin-top: 1em; margin-bottom: 0.5em; }
+    .ai-output ul, .ai-output ol { padding-left: 20px; margin-bottom: 1em; }
+    
+    .loading {
+      display: none;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-left-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .image-output { min-height: 300px; display: flex; align-items: center; justify-content: center; }
+    .image-output img { max-width: 100%; border-radius: 10px; object-fit: cover; }
+
+    .chat-container { display: flex; flex-direction: column; gap: 12px; }
+    .chat-history { flex: 1; height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 8px; }
+    .chat-bubble { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.5; font-size: 0.95rem; }
+    .chat-user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .chat-ai { background: rgba(255, 255, 255, 0.1); color: white; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .chat-input-row { display: flex; gap: 10px; }
+    
+    .md-line { opacity: 0; animation: fadeIn 0.3s forwards; }
+    @keyframes fadeIn { to { opacity: 1; } }
+    .cursor { display: inline-block; width: 8px; height: 16px; background: var(--primary); animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 4px; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+  </style>
+  <!-- Simple Markdown Parser for UI -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Eco-Action AI 🌍</h1>
+      <p class="subtitle">Your intelligent sustainability assistant.</p>
+    </header>
+
+    <div class="card">
+      <h3>Describe Your Activity</h3>
+      <label>What did you recently buy or do? (e.g. bought a new smartphone, took a 2-hour flight)</label>
+      <input type="text" id="activityInput" placeholder="I drove 30 miles to work today...">
+    </div>
+
+    <div class="card">
+      <h3>Your Location</h3>
+      <label>Where are you located? (Helps with relevant suggestions)</label>
+      <input type="text" id="locationInput" placeholder="e.g. London, UK">
+    </div>
+
+    <button class="btn" id="runAllBtn" onclick="runAll()">Analyze My Impact 🌱</button>
+
+    <div class="card">
+      <h3>Carbon Footprint Analysis</h3>
+      <div class="ai-output" id="carbonOutput">
+        <div class="loading" id="carbonLoading"><div class="spinner"></div></div>
+        <div id="carbonContent">Awaiting input...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Green Alternatives</h3>
+      <div class="ai-output" id="greenOutput">
+        <div class="loading" id="greenLoading"><div class="spinner"></div></div>
+        <div id="greenContent">Awaiting input...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Vision of a Greener Future</h3>
+      <div class="ai-output image-output" id="visionOutput">
+        <div class="loading" id="visionLoading"><div class="spinner"></div></div>
+        <div id="visionContent" style="color: var(--text-muted); text-align: center;">Image will appear here...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Eco-Expert Chat 💬</h3>
+      <div class="chat-container">
+        <div class="chat-history" id="chatHistory">
+          <div class="chat-bubble chat-ai">Hello! I'm your Eco-Expert. Once you analyze an activity, feel free to ask me any questions about sustainability.</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Ask a follow-up question..." onkeypress="if(event.key==='Enter') sendChat()">
+          <button class="btn" style="width: auto; padding: 0 24px;" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URLs will be injected by GitHub Actions sed command
+    const URLS = {
+      CARBON_ANALYSIS: '__URL_CARBONANALYSIS__',
+      GREEN_ALTERNATIVES: '__URL_GREENALTERNATIVES__',
+      ECO_EXPERT_CHAT: '__URL_ECOEXPERTCHAT__',
+      ECO_VISION: '__DIAGRAM_API_URL__'
+    };
+
+    let chatHistory = [];
+
+    async function streamResponse(url, payload, contentElementId, loadingElementId) {
+      const contentEl = document.getElementById(contentElementId);
+      const loadingEl = document.getElementById(loadingElementId);
+      
+      contentEl.innerHTML = '<span class="cursor"></span>';
+      loadingEl.style.display = 'block';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        loadingEl.style.display = 'none';
+
+        if (!response.ok) {
+          contentEl.innerHTML = `<span style="color:#ef4444">Error: Server returned ${response.status}</span>`;
+          return null;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let accumulatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          accumulatedText += chunk;
+          
+          // Render markdown to HTML and keep cursor
+          contentEl.innerHTML = marked.parse(accumulatedText) + '<span class="cursor"></span>';
+          // Auto scroll to bottom
+          contentEl.parentElement.scrollTop = contentEl.parentElement.scrollHeight;
+        }
+        
+        // Remove cursor at the end
+        contentEl.innerHTML = marked.parse(accumulatedText);
+        return accumulatedText;
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        contentEl.innerHTML = `<span style="color:#ef4444">Request failed: ${err.message}. If testing locally, ensure APIs are configured or test using AWS URLs.</span>`;
+        return null;
+      }
+    }
+
+    async function fetchImage(url, payload, contentElementId, loadingElementId) {
+      const contentEl = document.getElementById(contentElementId);
+      const loadingEl = document.getElementById(loadingElementId);
+      
+      contentEl.innerHTML = '';
+      loadingEl.style.display = 'block';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        loadingEl.style.display = 'none';
+
+        if (data.image) {
+          contentEl.innerHTML = `<img src="data:image/jpeg;base64,${data.image}" alt="Generated Image" />`;
+        } else {
+          contentEl.innerHTML = `<span style="color:#ef4444">Failed to generate image.</span>`;
+        }
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        contentEl.innerHTML = `<span style="color:#ef4444">Request failed: ${err.message}</span>`;
+      }
+    }
+
+    async function runAll() {
+      const activity = document.getElementById('activityInput').value.trim();
+      const location = document.getElementById('locationInput').value.trim();
+
+      if (!activity) {
+        alert("Please describe an activity first.");
+        return;
+      }
+
+      // 1. Carbon Analysis
+      const carbonAnalysisResult = await streamResponse(
+        URLS.CARBON_ANALYSIS, 
+        { activity, location }, 
+        'carbonContent', 
+        'carbonLoading'
+      );
+
+      // 2. Green Alternatives (Depends on Carbon Analysis)
+      let alternativesResult = "";
+      if (carbonAnalysisResult) {
+        alternativesResult = await streamResponse(
+          URLS.GREEN_ALTERNATIVES, 
+          { activity, location, carbon_analysis: carbonAnalysisResult }, 
+          'greenContent', 
+          'greenLoading'
+        );
+      }
+
+      // 3. Eco Vision Image (Depends on Alternatives)
+      if (alternativesResult) {
+        fetchImage(
+          URLS.ECO_VISION,
+          { alternatives: alternativesResult },
+          'visionContent',
+          'visionLoading'
+        );
+      }
+
+      // Initialize chat context if successful
+      if (carbonAnalysisResult) {
+        chatHistory = [
+          { role: 'user', content: `Context: I did this activity: "${activity}". My estimated carbon footprint analysis is: ${carbonAnalysisResult}. My green alternatives are: ${alternativesResult}.` },
+          { role: 'assistant', content: 'Acknowledged. I am ready to answer any questions about this.' }
+        ];
+      }
+    }
+
+    async function sendChat() {
+      const inputEl = document.getElementById('chatInput');
+      const msg = inputEl.value.trim();
+      if (!msg) return;
+
+      const historyEl = document.getElementById('chatHistory');
+      
+      // Append user message
+      historyEl.innerHTML += `<div class="chat-bubble chat-user">${msg}</div>`;
+      inputEl.value = '';
+      historyEl.scrollTop = historyEl.scrollHeight;
+
+      // Add temporary AI bubble with spinner
+      const id = 'chat-' + Date.now();
+      historyEl.innerHTML += `<div class="chat-bubble chat-ai" id="${id}"><div class="spinner" style="width:20px;height:20px;border-width:2px;display:inline-block;vertical-align:middle;"></div></div>`;
+      historyEl.scrollTop = historyEl.scrollHeight;
+
+      // Ensure chatHistory is initialized
+      if (chatHistory.length === 0) {
+        chatHistory = [{ role: 'system', content: 'You are an Eco-Expert chatbot.' }];
+      }
+
+      // Create payload
+      const payload = {
+        message: msg,
+        history: chatHistory
+      };
+
+      try {
+        const response = await fetch(URLS.ECO_EXPERT_CHAT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const bubbleEl = document.getElementById(id);
+        if (!response.ok) {
+          bubbleEl.innerHTML = `<span style="color:#ef4444">Error: ${response.status}</span>`;
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let accumulatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          accumulatedText += decoder.decode(value, { stream: true });
+          bubbleEl.innerHTML = marked.parse(accumulatedText) + '<span class="cursor"></span>';
+          historyEl.scrollTop = historyEl.scrollHeight;
+        }
+        
+        bubbleEl.innerHTML = marked.parse(accumulatedText);
+        
+        // Update history
+        chatHistory.push({ role: 'user', content: msg });
+        chatHistory.push({ role: 'assistant', content: accumulatedText });
+
+      } catch (err) {
+        document.getElementById(id).innerHTML = `<span style="color:#ef4444">Failed: ${err.message}</span>`;
+      }
+    }
+  </script>
+</body>
+</html>

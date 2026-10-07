@@ -1,0 +1,67 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: SAM Build
+        run: sam build --template infra/template.yaml
+
+      - name: SAM Deploy
+        run: |
+          sam deploy \
+            --stack-name eco-action-ai \
+            --s3-bucket ${{ secrets.SAM_DEPLOY_BUCKET }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --region ap-southeast-1 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
+
+      - name: Inject API URLs and Sync S3
+        run: |
+          get_output() { aws cloudformation describe-stacks --stack-name eco-action-ai \
+            --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          
+          CARBON_URL=$(get_output CarbonAnalysisUrl)
+          GREEN_URL=$(get_output GreenAlternativesUrl)
+          CHAT_URL=$(get_output EcoExpertChatUrl)
+          VISION_URL=$(get_output DiagramApiUrl)
+          BUCKET=$(get_output BucketName)
+          FRONTEND_URL=$(get_output WebsiteUrl)
+          
+          echo "Carbon Analysis URL: $CARBON_URL"
+          echo "Green Alternatives URL: $GREEN_URL"
+          echo "Eco Expert Chat URL: $CHAT_URL"
+          echo "Eco Vision URL: $VISION_URL"
+          echo "Bucket: $BUCKET"
+          echo "Frontend Live URL: $FRONTEND_URL"
+          
+          sed -i "s|__URL_CARBONANALYSIS__|$CARBON_URL|g" frontend/index.html
+          sed -i "s|__URL_GREENALTERNATIVES__|$GREEN_URL|g" frontend/index.html
+          sed -i "s|__URL_ECOEXPERTCHAT__|$CHAT_URL|g" frontend/index.html
+          sed -i "s|__DIAGRAM_API_URL__|$VISION_URL|g" frontend/index.html
+          
+          aws s3 sync frontend/ s3://$BUCKET/ --cache-control no-cache
